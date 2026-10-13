@@ -1,14 +1,14 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:appwrite/appwrite.dart';
 import '../config.dart';
 import '../models/models.dart';
+import 'appwrite_service.dart';
 
-/// HTTP client for the website's public JSON APIs (which proxy Appwrite).
+/// Data layer: talks directly to the shared Appwrite backend.
+/// Requires a logged-in user — collections and buckets grant read access
+/// to authenticated users, matching the website's login-gated policy.
 class ApiService {
-  final http.Client _client;
-  ApiService([http.Client? client]) : _client = client ?? http.Client();
-
-  static const _headers = {'User-Agent': 'ExamArchive-App/1.0'};
+  Databases get _db => AppwriteService().databases;
+  Storage get _storage => AppwriteService().storage;
 
   Future<List<Paper>> fetchPapers({
     int limit = 60,
@@ -19,60 +19,111 @@ class ApiService {
     String? examType,
     String? search,
   }) async {
-    final params = <String, String>{
-      'limit': '$limit',
-      'offset': '$offset',
-    };
-    if (department != null && department.isNotEmpty) params['department'] = department;
-    if (year != null) params['year'] = '$year';
-    if (semester != null && semester.isNotEmpty) params['semester'] = semester;
-    if (examType != null && examType.isNotEmpty) params['exam_type'] = examType;
-    if (search != null && search.isNotEmpty) params['search'] = search;
-    final uri = Uri.parse(AppConfig.papersApi).replace(queryParameters: params);
-    final res = await _client.get(uri, headers: _headers);
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load papers (${res.statusCode})');
+    final queries = <String>[
+      Query.equal('approved', true),
+      Query.orderDesc(r'$createdAt'),
+      Query.limit(limit),
+      Query.offset(offset),
+    ];
+    if (department != null && department.isNotEmpty) {
+      queries.add(Query.equal('department', department));
     }
-    final data = json.decode(res.body);
-    final list = data is List ? data : (data['items'] as List? ?? []);
-    return list.map((e) => Paper.fromJson(e as Map<String, dynamic>)).toList();
+    if (year != null) queries.add(Query.equal('year', year));
+    if (semester != null && semester.isNotEmpty) {
+      queries.add(Query.equal('semester', semester));
+    }
+    if (examType != null && examType.isNotEmpty) {
+      queries.add(Query.equal('exam_type', examType));
+    }
+    if (search != null && search.isNotEmpty) {
+      queries.add(Query.search('course_name', search));
+    }
+    try {
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.papersCollection,
+        queries: queries,
+      );
+      return res.documents.map((d) => Paper.fromJson(d.data)).toList();
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
   }
 
   Future<List<SyllabusEntry>> fetchSyllabusLibrary() async {
-    final res = await _client.get(Uri.parse(AppConfig.syllabusApi), headers: _headers);
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load syllabus library (${res.statusCode})');
+    try {
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.syllabusCollection,
+        queries: [
+          Query.equal('approval_status', 'approved'),
+          Query.orderAsc('subject'),
+          Query.limit(100),
+        ],
+      );
+      return res.documents.map((d) => SyllabusEntry.fromJson(d.data)).toList();
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
     }
-    final data = json.decode(res.body) as Map<String, dynamic>;
-    final list = (data['items'] as List?) ?? [];
-    return list.map((e) => SyllabusEntry.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<SyllabusUnit>> fetchSyllabusTable(Paper paper) async {
-    final url = AppConfig.syllabusTableApi(
-      paperCode: paper.courseCode,
-      university: 'Assam University',
-      course: 'FYUG',
-      stream: paper.stream ?? '',
-      type: paper.paperType ?? '',
-    );
-    final res = await _client.get(Uri.parse(url), headers: _headers);
-    if (res.statusCode != 200) return [];
-    final data = json.decode(res.body) as Map<String, dynamic>;
-    final paperData = data['paper'] as Map<String, dynamic>?;
-    final units = (paperData?['units'] as List?) ?? [];
-    return units.map((e) => SyllabusUnit.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  /// Download bytes for a paper PDF via the JWT-gated app proxy.
-  Future<List<int>> downloadPaperPdf({required String fileId, required String jwt}) async {
-    final url = AppConfig.appDownloadUrl(fileId: fileId, jwt: jwt);
-    final res = await _client.get(Uri.parse(url), headers: _headers);
-    if (res.statusCode != 200) {
-      throw Exception('Download failed (${res.statusCode})');
+    final code = paper.courseCode.toUpperCase().trim();
+    if (code.isEmpty) return [];
+    final queries = <String>[
+      Query.equal('status', 'published'),
+      Query.equal('paper_code', code),
+      Query.orderAsc(r'$id'),
+      Query.limit(100),
+    ];
+    // Narrow further when the paper carries stream/type, like the website.
+    if (paper.stream != null && paper.stream!.isNotEmpty) {
+      queries.add(Query.equal('stream', paper.stream!));
     }
-    return res.bodyBytes;
+    if (paper.paperType != null && paper.paperType!.isNotEmpty) {
+      queries.add(Query.equal('type', paper.paperType!));
+    }
+    try {
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.syllabusTableCollection,
+        queries: queries,
+      );
+      return res.documents.map((d) => SyllabusUnit.fromJson(d.data)).toList();
+    } on AppwriteException catch (_) {
+      return [];
+    }
   }
 
-  void dispose() => _client.close();
+  /// Download a paper PDF's bytes straight from Appwrite Storage.
+  Future<List<int>> downloadPaperPdf(String fileId) async {
+    try {
+      final bytes = await _storage.getFileDownload(
+        bucketId: AppConfig.papersBucket,
+        fileId: fileId,
+      );
+      return bytes;
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// Download a syllabus PDF's bytes straight from Appwrite Storage.
+  Future<List<int>> downloadSyllabusPdf(String fileId) async {
+    try {
+      final bytes = await _storage.getFileDownload(
+        bucketId: AppConfig.syllabusBucket,
+        fileId: fileId,
+      );
+      return bytes;
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  String _friendly(AppwriteException e) {
+    final code = e.code ?? 0;
+    if (code == 401) return 'Please log in again (session expired).';
+    return e.message ?? 'Request failed ($code)';
+  }
 }

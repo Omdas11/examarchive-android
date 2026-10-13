@@ -63,14 +63,4 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     notifyListeners();
   }
-
-  /// JWT for the website's app download proxy.
-  Future<String?> downloadJwt() async {
-    if (!isLoggedIn) return null;
-    try {
-      return await AppwriteService().createDownloadJwt();
-    } catch (_) {
-      return null;
-    }
-  }
 }

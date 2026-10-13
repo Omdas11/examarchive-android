@@ -1,7 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import '../config.dart';
 
-/// Appwrite client singleton: auth runs directly against the Appwrite
+/// Appwrite client singleton: everything runs directly against the Appwrite
 /// backend (no custom domain needed).
 class AppwriteService {
   static final AppwriteService _instance = AppwriteService._internal();
@@ -10,6 +10,8 @@ class AppwriteService {
 
   late final Client client;
   late final Account account;
+  late final Databases databases;
+  late final Storage storage;
   bool _ready = false;
 
   void init() {
@@ -19,12 +21,8 @@ class AppwriteService {
         .setProject(AppConfig.appwriteProjectId)
         .setSelfSigned(status: false);
     account = Account(client);
+    databases = Databases(client);
+    storage = Storage(client);
     _ready = true;
-  }
-
-  /// Short-lived JWT for the website's app download proxy.
-  Future<String> createDownloadJwt() async {
-    final jwt = await account.createJWT();
-    return jwt.jwt;
   }
 }

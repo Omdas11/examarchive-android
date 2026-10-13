@@ -24,7 +24,7 @@ class ExamArchiveApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()..load()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
-        ChangeNotifierProvider(create: (_) => PapersProvider()..refresh()),
+        ChangeNotifierProvider(create: (_) => PapersProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
@@ -59,6 +59,18 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    if (auth.loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    // Papers, syllabus and downloads all come straight from Appwrite,
+    // which grants read access to logged-in users — so the app needs
+    // an ExamArchive account (the same one as the website).
+    if (!auth.isLoggedIn) {
+      return const Scaffold(body: SafeArea(child: AccountScreen()));
+    }
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: NavigationBar(

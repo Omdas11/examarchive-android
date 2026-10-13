@@ -98,10 +98,4 @@ class PapersProvider extends ChangeNotifier {
     _semester = null;
     refresh();
   }
-
-  @override
-  void dispose() {
-    _api.dispose();
-    super.dispose();
-  }
 }

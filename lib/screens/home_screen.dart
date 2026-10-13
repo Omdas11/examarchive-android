@@ -29,6 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<PapersProvider>().loadMore();
       }
     });
+    // Fetch after login gate: HomeScreen first builds once authenticated.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<PapersProvider>().refresh();
+    });
   }
 
   @override

@@ -43,9 +43,8 @@ class _PaperDetailScreenState extends State<PaperDetailScreen> {
     }
     setState(() { _downloading = true; _downloadError = null; });
     try {
-      final jwt = await auth.downloadJwt();
-      if (jwt == null) throw Exception('Could not get download token. Try logging in again.');
-      final bytes = await _api.downloadPaperPdf(fileId: widget.paper.fileId, jwt: jwt);
+      // Direct from Appwrite Storage — no website in the middle.
+      final bytes = await _api.downloadPaperPdf(widget.paper.fileId);
       final dir = await getTemporaryDirectory();
       final safeName = widget.paper.courseCode.replaceAll(RegExp(r'[^\w\-]'), '_');
       final file = File('${dir.path}/$safeName-${widget.paper.year ?? ''}.pdf');
@@ -85,7 +84,6 @@ class _PaperDetailScreenState extends State<PaperDetailScreen> {
 
   @override
   void dispose() {
-    _api.dispose();
     super.dispose();
   }
 

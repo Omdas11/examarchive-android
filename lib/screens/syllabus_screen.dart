@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
@@ -57,20 +56,14 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
     }
     setState(() { _downloading = true; _downloadingId = entry.id; });
     try {
-      // Syllabus PDFs live in the syllabus-files bucket; fetch via the
-      // website file proxy using an authenticated http client is not
-      // available, so download the raw file through the public API host
-      // with the user's JWT.
-      final jwt = await auth.downloadJwt();
-      if (jwt == null) throw Exception('Could not get download token.');
-      // file_url is like /api/files/syllabus/<fileId> — reuse it with JWT.
+      // Direct from Appwrite Storage (syllabus-files bucket).
+      // file_url is like /api/files/syllabus/<fileId>.
       final fileId = entry.fileUrl.split('/').last;
-      final url = Uri.parse('https://www.examarchive.dev/api/app/syllabus-pdf?fileId=$fileId&jwt=$jwt');
-      final res = await http.get(url, headers: {'User-Agent': 'ExamArchive-App/1.0'});
-      if (res.statusCode != 200) throw Exception('Download failed (${res.statusCode})');
+      if (fileId.isEmpty) throw Exception('No file attached to this syllabus.');
+      final bytes = await _api.downloadSyllabusPdf(fileId);
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/syllabus-${entry.subject}.pdf');
-      await file.writeAsBytes(res.bodyBytes);
+      await file.writeAsBytes(bytes);
       if (!mounted) return;
       setState(() { _downloading = false; _downloadingId = null; });
       Navigator.push(
@@ -91,7 +84,6 @@ class _SyllabusScreenState extends State<SyllabusScreen> {
 
   @override
   void dispose() {
-    _api.dispose();
     super.dispose();
   }
 

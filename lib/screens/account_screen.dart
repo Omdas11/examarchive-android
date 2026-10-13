@@ -61,7 +61,22 @@ class _AccountScreenState extends State<AccountScreen> {
           if (auth.loading)
             const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
           else if (!auth.isLoggedIn)
-            _buildLoginCard()
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Log in with your ExamArchive account to browse papers and syllabi. New here? Switch to Sign up below — it is free.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildLoginCard(),
+              ],
+            )
           else
             _buildUserCard(auth),
           const SizedBox(height: 20),
@@ -88,7 +103,7 @@ class _AccountScreenState extends State<AccountScreen> {
             child: Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'ExamArchive — free past exam papers & syllabi for Haflong Government College (Assam University) FYUGP students.\n\nThis app talks directly to the same Appwrite backend as examarchive.dev — everything is live, nothing is bundled.',
+                'ExamArchive — free past exam papers & syllabi for Haflong Government College (Assam University) FYUGP students.\n\nThis app talks directly to the ExamArchive Appwrite backend — everything is live, nothing is bundled.',
               ),
             ),
           ),
