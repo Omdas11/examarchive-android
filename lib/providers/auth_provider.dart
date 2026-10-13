@@ -1,6 +1,9 @@
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/enums.dart' show OAuthProvider;
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../config.dart';
 import '../services/appwrite_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -62,5 +65,38 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {}
     _user = null;
     notifyListeners();
+  }
+
+  /// Google sign-in via Appwrite OAuth2 (same provider the website uses).
+  /// Opens the system browser; Appwrite redirects back into the app through
+  /// the `appwrite-callback-<projectId>` scheme declared in AndroidManifest.
+  Future<bool> signInWithGoogle() async {
+    _error = null;
+    notifyListeners();
+    const scheme = 'appwrite-callback-${AppConfig.appwriteProjectId}';
+    try {
+      await AppwriteService().account.createOAuth2Session(
+        provider: OAuthProvider.google,
+        success: '$scheme://',
+        failure: '$scheme://',
+      );
+      _user = await AppwriteService().account.get();
+      notifyListeners();
+      return true;
+    } on PlatformException catch (e) {
+      // User dismissed the browser tab before finishing.
+      if (e.code == 'CANCELED') return false;
+      _error = 'Google sign-in failed. Please try again.';
+      notifyListeners();
+      return false;
+    } on AppwriteException catch (e) {
+      _error = e.message ?? 'Google sign-in failed';
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _error = 'Google sign-in failed. Please try again.';
+      notifyListeners();
+      return false;
+    }
   }
 }

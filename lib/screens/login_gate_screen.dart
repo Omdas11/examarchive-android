@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../config.dart';
 import '../providers/auth_provider.dart';
@@ -46,6 +47,16 @@ class _LoginGateScreenState extends State<LoginGateScreen> {
         ? await auth.signup(email, pass,
             _nameCtrl.text.trim().isEmpty ? email.split('@').first : _nameCtrl.text.trim())
         : await auth.login(email, pass);
+    if (mounted) {
+      setState(() => _busy = false);
+      if (!ok && auth.error != null) _snack(auth.error!);
+    }
+  }
+
+  Future<void> _googleSignIn() async {
+    final auth = context.read<AuthProvider>();
+    setState(() => _busy = true);
+    final ok = await auth.signInWithGoogle();
     if (mounted) {
       setState(() => _busy = false);
       if (!ok && auth.error != null) _snack(auth.error!);
@@ -177,6 +188,59 @@ class _LoginGateScreenState extends State<LoginGateScreen> {
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('or',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey)),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _busy ? null : _googleSignIn,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1F1F1F),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      child: _busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/google_g.svg',
+                                  height: 20,
+                                  width: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'Continue with Google',
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                   const SizedBox(height: 18),
