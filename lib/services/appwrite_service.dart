@@ -12,6 +12,7 @@ class AppwriteService {
   late final Account account;
   late final Databases databases;
   late final Storage storage;
+  late final Functions functions;
   bool _ready = false;
 
   void init() {
@@ -23,6 +24,7 @@ class AppwriteService {
     account = Account(client);
     databases = Databases(client);
     storage = Storage(client);
+    functions = Functions(client);
     _ready = true;
   }
 }

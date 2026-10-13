@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/papers_provider.dart';
 import 'paper_detail_screen.dart';
+import 'upload_screen.dart';
 
 const _departments = [
   'Assamese', 'Bengali', 'Botany', 'Chemistry', 'Commerce', 'Economics',
@@ -109,6 +110,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Expanded(child: _buildList(provider)),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const UploadScreen()),
+        ),
+        icon: const Icon(Icons.upload_outlined),
+        label: const Text('Upload'),
       ),
     );
   }

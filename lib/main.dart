@@ -8,6 +8,8 @@ import 'theme/app_themes.dart';
 import 'screens/home_screen.dart';
 import 'screens/syllabus_screen.dart';
 import 'screens/account_screen.dart';
+import 'screens/ai_tools_screen.dart';
+import 'screens/store_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +56,8 @@ class _MainShellState extends State<MainShell> {
   static const _screens = [
     HomeScreen(),
     SyllabusScreen(),
+    AiToolsScreen(),
+    StoreScreen(),
     AccountScreen(),
   ];
 
@@ -86,6 +90,16 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: 'Syllabus',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'AI Tools',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront),
+            label: 'Store',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outlined),

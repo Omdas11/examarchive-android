@@ -1,4 +1,5 @@
 import 'package:appwrite/appwrite.dart';
+import 'dart:convert';
 import '../config.dart';
 import '../models/models.dart';
 import 'appwrite_service.dart';
@@ -116,6 +117,96 @@ class ApiService {
         fileId: fileId,
       );
       return bytes;
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// Upload a paper PDF to Storage and create its database document.
+  /// The paper goes to the moderation queue (approved=false), like the website.
+  Future<void> uploadPaper({
+    required String filePath,
+    required String fileName,
+    required String courseCode,
+    required String department,
+    required int year,
+    required String semester,
+    String? examType,
+    String? paperType,
+    String? programme,
+  }) async {
+    try {
+      final file = await _storage.createFile(
+        bucketId: AppConfig.papersBucket,
+        fileId: ID.unique(),
+        file: InputFile.fromPath(path: filePath, filename: fileName),
+      );
+      final user = await AppwriteService().account.get();
+      await _db.createDocument(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.papersCollection,
+        documentId: ID.unique(),
+        data: {
+          'course_code': courseCode.toUpperCase().trim(),
+          'paper_name': courseCode.toUpperCase().trim(),
+          'department': department,
+          'year': year,
+          'semester': semester,
+          'exam_type': examType,
+          'paper_type': paperType,
+          'programme': programme ?? 'FYUGP',
+          'institute': 'Haflong Government College',
+          'file_id': file.$id,
+          'file_url': '/api/files/papers/${file.$id}',
+          'approved': false,
+          'status': 'pending',
+          'uploaded_by': user.$id,
+        },
+      );
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// Papers uploaded by the current user (for the dashboard).
+  Future<List<Paper>> fetchMyUploads() async {
+    try {
+      final user = await AppwriteService().account.get();
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.papersCollection,
+        queries: [
+          Query.equal('uploaded_by', user.$id),
+          Query.orderDesc(r'$createdAt'),
+          Query.limit(50),
+        ],
+      );
+      return res.documents.map((d) => Paper.fromJson(d.data)).toList();
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// Generate AI flashcards via the public ai-flashcards function.
+  Future<List<Map<String, String>>> generateFlashcards({
+    required String subject,
+    required String topic,
+    int count = 10,
+  }) async {
+    try {
+      final exec = await AppwriteService().functions.createExecution(
+        functionId: 'ai-flashcards',
+        body: jsonEncode({'subject': subject, 'topic': topic, 'count': count}),
+      );
+      final out = jsonDecode(exec.responseBody) as Map<String, dynamic>;
+      final cards = (out['flashcards'] as List?) ?? [];
+      return cards.map((c) {
+        final m = c as Map<String, dynamic>;
+        return {
+          'front': (m['front'] ?? m['question'] ?? '').toString(),
+          'back': (m['back'] ?? m['answer'] ?? '').toString(),
+        };
+      }).toList();
     } on AppwriteException catch (e) {
       throw Exception(_friendly(e));
     }

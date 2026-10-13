@@ -16,6 +16,7 @@ class Paper {
   final String fileUrl;
   final int downloadCount;
   final int viewCount;
+  final bool approved;
 
   Paper({
     required this.id,
@@ -34,6 +35,7 @@ class Paper {
     this.institute,
     this.downloadCount = 0,
     this.viewCount = 0,
+    this.approved = false,
   });
 
   /// Display title: prefer paper_name, fall back to title, then course code.
@@ -61,6 +63,7 @@ class Paper {
       fileUrl: (j['file_url'] ?? '').toString(),
       downloadCount: (j['download_count'] as int?) ?? 0,
       viewCount: (j['view_count'] as int?) ?? 0,
+      approved: (j['approved'] as bool?) ?? (j['status'] == 'approved'),
     );
   }
 }
