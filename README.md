@@ -1,8 +1,8 @@
 # ExamArchive — Android App
 
 Native Android companion to [examarchive-v3](https://github.com/Omdas11/examarchive-v3).
-Built with **Flutter**, powered by the same **Appwrite** backend as the website —
-same accounts, same papers, same syllabus.
+Built with **Flutter**, talking **directly to the shared Appwrite backend** —
+same accounts, same papers, same syllabus. No website or custom domain involved.
 
 ## Download
 
@@ -11,9 +11,12 @@ Pick the build for your device (most modern phones: `arm64-v8a`):
 
 | File | Devices |
 |------|---------|
-| `ExamArchive-v0.1.0-beta-arm64-v8a.apk` | Most Android phones (2017+) |
-| `ExamArchive-v0.1.0-beta-armeabi-v7a.apk` | Older 32-bit phones |
-| `ExamArchive-v0.1.0-beta-x86_64.apk` | Emulators / x86 devices |
+| `ExamArchive-v0.2.0-beta-arm64-v8a.apk` | Most Android phones (2017+) |
+| `ExamArchive-v0.2.0-beta-armeabi-v7a.apk` | Older 32-bit phones |
+| `ExamArchive-v0.2.0-beta-x86_64.apk` | Emulators / x86 devices |
+
+Log in with your ExamArchive account (same as the website) — the app needs it
+to read from the backend.
 
 ## Features
 
@@ -26,8 +29,7 @@ Pick the build for your device (most modern phones: `arm64-v8a`):
 ## Tech
 
 - Flutter + Dart, Material 3
-- Appwrite SDK (auth directly against the shared Appwrite project)
-- PDF download via the website's JWT-gated `/api/app/*` endpoints
+- Appwrite SDK directly (auth, database, storage) — no website proxy involved
 
 ## Build it yourself
 
