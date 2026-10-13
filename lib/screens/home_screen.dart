@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../providers/papers_provider.dart';
 import 'paper_detail_screen.dart';
 import 'upload_screen.dart';
+import '../widgets/theme_icon_button.dart';
 
 const _departments = [
   'Assamese', 'Bengali', 'Botany', 'Chemistry', 'Commerce', 'Economics',
@@ -50,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('ExamArchive', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          const ThemeIconButton(),
           if (provider.department != null || provider.year != null || provider.semester != null)
             IconButton(
               icon: const Icon(Icons.filter_alt_off_outlined),

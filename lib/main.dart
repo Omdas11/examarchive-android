@@ -11,6 +11,8 @@ import 'screens/account_screen.dart';
 import 'screens/ai_tools_screen.dart';
 import 'screens/store_screen.dart';
 
+import 'screens/login_gate_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppwriteService().init();
@@ -73,7 +75,7 @@ class _MainShellState extends State<MainShell> {
     // which grants read access to logged-in users — so the app needs
     // an ExamArchive account (the same one as the website).
     if (!auth.isLoggedIn) {
-      return const Scaffold(body: SafeArea(child: AccountScreen()));
+      return const LoginGateScreen();
     }
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
