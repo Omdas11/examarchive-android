@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for all in-app network access (email login, papers, etc.).
+         Without this, release builds fail with "Failed host lookup" because
+         the app has no network access at all. (debug/profile manifests have
+         it, but those are not included in release builds.) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="ExamArchive"
         android:name="${applicationName}"
