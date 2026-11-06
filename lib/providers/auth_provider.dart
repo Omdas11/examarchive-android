@@ -3,7 +3,6 @@ import 'package:appwrite/enums.dart' show OAuthProvider;
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../config.dart';
 import '../services/appwrite_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -70,16 +69,16 @@ class AuthProvider extends ChangeNotifier {
   /// Google sign-in via Appwrite OAuth2 (same provider the website uses).
   /// Opens the system browser; Appwrite redirects back into the app through
   /// the `appwrite-callback-<projectId>` scheme declared in AndroidManifest.
+  /// NOTE: do NOT pass success/failure URLs — on Android/iOS only the
+  /// default redirect carries the session (key/secret) back; a custom URL
+  /// returns without them and the SDK throws "Invalid OAuth2 Response".
   Future<bool> signInWithGoogle() async {
     _error = null;
     notifyListeners();
-    const scheme = 'appwrite-callback-${AppConfig.appwriteProjectId}';
     try {
-      await AppwriteService().account.createOAuth2Session(
-        provider: OAuthProvider.google,
-        success: '$scheme://',
-        failure: '$scheme://',
-      );
+      await AppwriteService()
+          .account
+          .createOAuth2Session(provider: OAuthProvider.google);
       _user = await AppwriteService().account.get();
       notifyListeners();
       return true;
