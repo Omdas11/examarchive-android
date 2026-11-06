@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../config.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
+import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../widgets/theme_icon_button.dart';
 import 'admin_screen.dart';
@@ -24,6 +25,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile? _profile;
   List<Paper> _uploads = [];
   int _verifications = 0;
+  int? _visitorCount;
+  bool? _analyticsOn;
   bool _loading = true;
   String? _error;
 
@@ -39,12 +42,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _api.fetchMyProfile(),
         _api.fetchMyUploads(),
         _api.fetchVerificationCount(),
+        AnalyticsService().fetchVisitorCount(),
       ]);
+      final analytics = AnalyticsService();
+      final decided = await analytics.hasConsentDecision;
       if (mounted) {
         setState(() {
           _profile = results[0] as UserProfile?;
           _uploads = results[1] as List<Paper>;
           _verifications = results[2] as int;
+          _visitorCount = results[3] as int?;
+          _analyticsOn = decided ? analytics.consented : null;
           _loading = false;
         });
       }
@@ -89,6 +97,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _achievementsCard(),
                       const SizedBox(height: 12),
                       _accountInfoCard(auth),
+                      const SizedBox(height: 12),
+                      _analyticsCard(),
                       const SizedBox(height: 12),
                       _actionsRow(),
                       if (_profile?.isAdmin == true) ...[
@@ -448,6 +458,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 10),
             _infoRow('Verifications', '$_verifications'),
+            if (_visitorCount != null)
+              _infoRow('Visitors', '$_visitorCount'),
             _infoRow('User ID', user.$id),
             _infoRow('Member since', joined),
           ],
@@ -473,6 +485,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Analytics consent (same gate as the website's cookie banner).
+  /// Off means no GA4, no visit log and no visitor counting from this app.
+  Widget _analyticsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Anonymous usage stats',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 4),
+            const Text(
+              'Screens visited, counted in the same GA4 property and '
+              'visitor counter as the website. No personal data.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Share anonymous usage stats',
+                      style: TextStyle(fontWeight: FontWeight.w500)),
+                ),
+                Switch(
+                  value: _analyticsOn ?? false,
+                  onChanged: (value) async {
+                    await AnalyticsService().setConsented(value);
+                    if (mounted) {
+                      setState(() => _analyticsOn = value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

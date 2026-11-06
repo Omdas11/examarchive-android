@@ -4,6 +4,7 @@ import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/papers_provider.dart';
 import 'services/appwrite_service.dart';
+import 'services/analytics_service.dart';
 import 'theme/app_themes.dart';
 import 'screens/browse_screen.dart';
 import 'screens/syllabus_screen.dart';
@@ -60,6 +61,38 @@ class _MainShellState extends State<MainShell> {
     ProfileScreen(),
   ];
 
+  static const _screenNames = ['Syllabus', 'Browse', 'Profile'];
+  static const _screenPaths = ['syllabus', 'browse', 'profile'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeAskConsent();
+      _trackCurrent();
+    });
+  }
+
+  Future<void> _maybeAskConsent() async {
+    if (await AnalyticsService().hasConsentDecision) return;
+    if (!mounted) return;
+    final accepted = await AnalyticsService.showConsentDialog(context);
+    await AnalyticsService().setConsented(accepted);
+    if (accepted && mounted) _trackCurrent();
+  }
+
+  void _trackCurrent() {
+    AnalyticsService().trackScreen(
+      _screenNames[_index],
+      _screenPaths[_index],
+    );
+  }
+
+  void _select(int i) {
+    setState(() => _index = i);
+    _trackCurrent();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -78,7 +111,7 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _select,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),

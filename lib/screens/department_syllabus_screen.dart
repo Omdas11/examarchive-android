@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 
 /// One department's syllabus: its papers, each expandable to show units.
@@ -46,6 +47,10 @@ class _DepartmentSyllabusScreenState extends State<DepartmentSyllabusScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreen(
+      '${widget.entry.displayName} Syllabus',
+      'syllabus/${widget.entry.displayName.toLowerCase()}',
+    );
     _load();
   }
 

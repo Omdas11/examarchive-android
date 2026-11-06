@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
+import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 
 class PaperDetailScreen extends StatefulWidget {
@@ -25,6 +26,10 @@ class _PaperDetailScreenState extends State<PaperDetailScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreen(
+      'Paper ${widget.paper.courseCode}',
+      'paper/${widget.paper.courseCode}',
+    );
     _loadUnits();
   }
 
