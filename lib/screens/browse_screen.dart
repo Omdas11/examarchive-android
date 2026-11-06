@@ -12,14 +12,14 @@ const _departments = [
   'Political Science', 'Zoology',
 ];
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class BrowseScreen extends StatefulWidget {
+  const BrowseScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<BrowseScreen> createState() => _BrowseScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _BrowseScreenState extends State<BrowseScreen> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
 
@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = context.watch<PapersProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ExamArchive', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Browse", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           const ThemeIconButton(),
           if (provider.department != null || provider.year != null || provider.semester != null)

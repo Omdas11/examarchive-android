@@ -5,11 +5,9 @@ import 'providers/auth_provider.dart';
 import 'providers/papers_provider.dart';
 import 'services/appwrite_service.dart';
 import 'theme/app_themes.dart';
-import 'screens/home_screen.dart';
+import 'screens/browse_screen.dart';
 import 'screens/syllabus_screen.dart';
-import 'screens/account_screen.dart';
-import 'screens/ai_tools_screen.dart';
-import 'screens/store_screen.dart';
+import 'screens/profile_screen.dart';
 
 import 'screens/login_gate_screen.dart';
 
@@ -53,14 +51,13 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
+  // Browse sits in the middle of the dock, like the website's main action.
+  int _index = 1;
 
   static const _screens = [
-    HomeScreen(),
     SyllabusScreen(),
-    AiToolsScreen(),
-    StoreScreen(),
-    AccountScreen(),
+    BrowseScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -84,29 +81,19 @@ class _MainShellState extends State<MainShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description),
-            label: 'Papers',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: 'Syllabus',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: 'AI Tools',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront),
-            label: 'Store',
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description),
+            label: 'Browse',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outlined),
             selectedIcon: Icon(Icons.person),
-            label: 'Account',
+            label: 'Profile',
           ),
         ],
       ),

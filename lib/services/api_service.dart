@@ -1,5 +1,4 @@
 import 'package:appwrite/appwrite.dart';
-import 'dart:convert';
 import '../config.dart';
 import '../models/models.dart';
 import 'appwrite_service.dart';
@@ -109,19 +108,6 @@ class ApiService {
     }
   }
 
-  /// Download a syllabus PDF's bytes straight from Appwrite Storage.
-  Future<List<int>> downloadSyllabusPdf(String fileId) async {
-    try {
-      final bytes = await _storage.getFileDownload(
-        bucketId: AppConfig.syllabusBucket,
-        fileId: fileId,
-      );
-      return bytes;
-    } on AppwriteException catch (e) {
-      throw Exception(_friendly(e));
-    }
-  }
-
   /// Upload a paper PDF to Storage and create its database document.
   /// The paper goes to the moderation queue (approved=false), like the website.
   Future<void> uploadPaper({
@@ -187,29 +173,145 @@ class ApiService {
     }
   }
 
-  /// Generate AI flashcards via the public ai-flashcards function.
-  Future<List<Map<String, String>>> generateFlashcards({
-    required String subject,
-    required String topic,
-    int count = 10,
-  }) async {
+  /// The current user's profile document from the `users` collection
+  /// (role, XP, streak, upload count — same fields as the website's /profile).
+  /// The doc is readable by its owner (Permission.read(Role.user(id))).
+  Future<UserProfile?> fetchMyProfile() async {
     try {
-      final exec = await AppwriteService().functions.createExecution(
-        functionId: 'ai-flashcards',
-        body: jsonEncode({'subject': subject, 'topic': topic, 'count': count}),
+      final user = await AppwriteService().account.get();
+      final doc = await _db.getDocument(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.usersCollection,
+        documentId: user.$id,
       );
-      final out = jsonDecode(exec.responseBody) as Map<String, dynamic>;
-      final cards = (out['flashcards'] as List?) ?? [];
-      return cards.map((c) {
-        final m = c as Map<String, dynamic>;
-        return {
-          'front': (m['front'] ?? m['question'] ?? '').toString(),
-          'back': (m['back'] ?? m['answer'] ?? '').toString(),
-        };
-      }).toList();
+      return UserProfile.fromJson(doc.data);
+    } on AppwriteException catch (_) {
+      return null;
+    }
+  }
+
+  /// Number of content verifications this user has submitted
+  /// (the website's verify-to-earn ledger).
+  Future<int> fetchVerificationCount() async {
+    try {
+      final user = await AppwriteService().account.get();
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.verificationsCollection,
+        queries: [
+          Query.equal('user_id', user.$id),
+          Query.limit(1),
+        ],
+      );
+      return res.total;
+    } on AppwriteException catch (_) {
+      return 0;
+    }
+  }
+
+  /// Admin stats (moderator+): pending/approved paper counts and
+  /// pending syllabus count. Reads only — approval stays on the website.
+  Future<({int pendingPapers, int approvedPapers, int pendingSyllabi})>
+      fetchAdminStats() async {
+    try {
+      final pending = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.papersCollection,
+        queries: [Query.equal('approved', false), Query.limit(1)],
+      );
+      final approved = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.papersCollection,
+        queries: [Query.equal('approved', true), Query.limit(1)],
+      );
+      final pendingSyl = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.syllabusCollection,
+        queries: [
+          Query.notEqual('approval_status', 'approved'),
+          Query.limit(1),
+        ],
+      );
+      return (
+        pendingPapers: pending.total,
+        approvedPapers: approved.total,
+        pendingSyllabi: pendingSyl.total,
+      );
     } on AppwriteException catch (e) {
       throw Exception(_friendly(e));
     }
+  }
+
+  /// Papers awaiting moderation (newest first).
+  Future<List<Paper>> fetchPendingPapers({int limit = 50}) async {
+    try {
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.papersCollection,
+        queries: [
+          Query.equal('approved', false),
+          Query.orderDesc(r'$createdAt'),
+          Query.limit(limit),
+        ],
+      );
+      return res.documents.map((d) => Paper.fromJson(d.data)).toList();
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// Syllabus entries awaiting moderation (newest first).
+  Future<List<SyllabusEntry>> fetchPendingSyllabi({int limit = 50}) async {
+    try {
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.syllabusCollection,
+        queries: [
+          Query.notEqual('approval_status', 'approved'),
+          Query.orderDesc(r'$createdAt'),
+          Query.limit(limit),
+        ],
+      );
+      return res.documents.map((d) => SyllabusEntry.fromJson(d.data)).toList();
+    } on AppwriteException catch (e) {
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// All syllabus units for one department, grouped by paper code.
+  /// Uses the paper-code prefix (e.g. PHY covers PHYDSC/PHYDSM/PHYIDC…).
+  /// The department PDFs lived in the deleted `syllabus-files` bucket, so
+  /// this table content is what the Syllabus tab shows now instead.
+  Future<Map<String, List<SyllabusUnit>>> fetchDepartmentSyllabus(
+      String prefix) async {
+    final grouped = <String, List<SyllabusUnit>>{};
+    var offset = 0;
+    const pageSize = 100;
+    while (true) {
+      final res = await _db.listDocuments(
+        databaseId: AppConfig.appwriteDatabaseId,
+        collectionId: AppConfig.syllabusTableCollection,
+        queries: [
+          Query.equal('status', 'published'),
+          Query.startsWith('paper_code', prefix),
+          Query.orderAsc('paper_code'),
+          Query.limit(pageSize),
+          Query.offset(offset),
+        ],
+      );
+      for (final d in res.documents) {
+        final unit = SyllabusUnit.fromJson(d.data);
+        if (unit.paperCode.isEmpty) continue;
+        (grouped[unit.paperCode] ??= []).add(unit);
+      }
+      offset += res.documents.length;
+      if (res.documents.length < pageSize || offset >= res.total) break;
+    }
+    // Units within each paper in unit-number order.
+    for (final units in grouped.values) {
+      units.sort((a, b) => a.unitNumber.compareTo(b.unitNumber));
+    }
+    return grouped;
   }
 
   String _friendly(AppwriteException e) {

@@ -105,14 +105,69 @@ class SyllabusUnit {
   final int unitNumber;
   final String content;
   final int? lectures;
+  final String paperCode;
 
-  SyllabusUnit({required this.unitNumber, required this.content, this.lectures});
+  SyllabusUnit({
+    required this.unitNumber,
+    required this.content,
+    this.lectures,
+    this.paperCode = '',
+  });
 
   factory SyllabusUnit.fromJson(Map<String, dynamic> j) {
     return SyllabusUnit(
       unitNumber: (j['unit_number'] as int?) ?? (j['unitNumber'] as int?) ?? 0,
       content: (j['syllabus_content'] ?? j['content'] ?? '').toString(),
       lectures: j['lectures'] is int ? j['lectures'] as int : null,
+      paperCode: (j['paper_code'] ?? '').toString(),
     );
   }
+}
+
+/// The current user's profile document from the `users` collection
+/// (same fields the website's /profile page reads).
+class UserProfile {
+  final String id;
+  final String role;
+  final int xp;
+  final int streakDays;
+  final String lastActivity;
+  final int uploadCount;
+  final String username;
+  final String displayName;
+  final String avatarUrl;
+  final String tier;
+
+  UserProfile({
+    required this.id,
+    this.role = 'student',
+    this.xp = 0,
+    this.streakDays = 0,
+    this.lastActivity = '',
+    this.uploadCount = 0,
+    this.username = '',
+    this.displayName = '',
+    this.avatarUrl = '',
+    this.tier = 'bronze',
+  });
+
+  factory UserProfile.fromJson(Map<String, dynamic> j) {
+    int asInt(dynamic v) =>
+        v is int ? v : int.tryParse('${v ?? ''}') ?? 0;
+    return UserProfile(
+      id: (j['\$id'] ?? '').toString(),
+      role: (j['role'] ?? 'student').toString(),
+      xp: asInt(j['xp']),
+      streakDays: asInt(j['streak_days']),
+      lastActivity: (j['last_activity'] ?? '').toString(),
+      uploadCount: asInt(j['upload_count']),
+      username: (j['username'] ?? '').toString(),
+      displayName: (j['display_name'] ?? '').toString(),
+      avatarUrl: (j['avatar_url'] ?? '').toString(),
+      tier: (j['tier'] ?? 'bronze').toString(),
+    );
+  }
+
+  /// Moderator or founder — the website's `isAdmin` (roles.ts).
+  bool get isAdmin => role == 'moderator' || role == 'founder';
 }

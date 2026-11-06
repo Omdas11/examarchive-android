@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Named app themes — all use the website's Plus Jakarta Sans + emerald brand.
+/// Named app themes — all use the website's Plus Jakarta Sans + emerald brand,
+/// with Material 3 Expressive (dynamicSchemeVariant.expressive) for rounder,
+/// more colourful components.
 enum AppThemeName {
   system('System default'),
   light('Light'),
@@ -21,86 +23,130 @@ class AppThemes {
   static TextTheme _jakarta(TextTheme base) =>
       GoogleFonts.plusJakartaSansTextTheme(base);
 
+  /// Material 3 Expressive colour scheme from the brand seed.
+  static ColorScheme _expressiveScheme(Brightness brightness, Color seed) =>
+      ColorScheme.fromSeed(
+        seedColor: seed,
+        brightness: brightness,
+        dynamicSchemeVariant: DynamicSchemeVariant.expressive,
+      );
+
+  /// Expressive shapes: bigger radii everywhere.
+  static const _cardShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(24)),
+  );
+
   static ThemeData _withFont(ThemeData t) =>
       t.copyWith(textTheme: _jakarta(t.textTheme));
 
-  static ThemeData light() {
-    final base = ThemeData.light(useMaterial3: true);
+  static ThemeData _expressiveBase({
+    required Brightness brightness,
+    required Color seed,
+    Color? scaffoldBackground,
+    Color? cardColor,
+    Color? surface,
+    Color? surfaceContainerHighest,
+    Color? appBarBackground,
+    Color? appBarForeground,
+    Color? cardBorder,
+  }) {
+    final scheme = _expressiveScheme(brightness, seed);
+    final base = brightness == Brightness.dark
+        ? ThemeData.dark(useMaterial3: true)
+        : ThemeData.light(useMaterial3: true);
     return _withFont(base.copyWith(
-      colorScheme: ColorScheme.fromSeed(seedColor: emerald, brightness: Brightness.light),
-      appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
+      colorScheme: scheme.copyWith(
+        surface: surface ?? scheme.surface,
+        surfaceContainerHighest:
+            surfaceContainerHighest ?? scheme.surfaceContainerHighest,
       ),
-    ));
-  }
-
-  static ThemeData dark() {
-    final base = ThemeData.dark(useMaterial3: true);
-    return _withFont(base.copyWith(
-      colorScheme: ColorScheme.fromSeed(seedColor: emerald, brightness: Brightness.dark),
-      appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade800),
-        ),
-      ),
-    ));
-  }
-
-  static ThemeData amoled() {
-    final base = ThemeData.dark(useMaterial3: true);
-    return _withFont(base.copyWith(
-      scaffoldBackgroundColor: Colors.black,
-      canvasColor: Colors.black,
-      cardColor: const Color(0xFF0A0A0A),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: emerald,
-        brightness: Brightness.dark,
-      ).copyWith(surface: Colors.black, surfaceContainerHighest: const Color(0xFF111111)),
-      appBarTheme: const AppBarTheme(
+      scaffoldBackgroundColor: scaffoldBackground,
+      canvasColor: scaffoldBackground,
+      cardColor: cardColor,
+      appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
-        backgroundColor: Colors.black,
+        backgroundColor: appBarBackground,
+        foregroundColor: appBarForeground,
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: const Color(0xFF0A0A0A),
+        color: cardColor,
+        shape: _cardShape.copyWith(
+          side: cardBorder != null
+              ? BorderSide(color: cardBorder)
+              : BorderSide.none,
+        ),
+      ),
+      // Expressive navigation bar: tall, pill indicator.
+      navigationBarTheme: NavigationBarThemeData(
+        height: 72,
+        elevation: 0,
+        indicatorColor: scheme.secondaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(fontSize: 12, fontWeight: FontWeight.w700);
+          }
+          return const TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
+        }),
+      ),
+      // Expressive buttons and inputs: fully rounded where it fits.
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        ),
+      ),
+      searchBarTheme: SearchBarThemeData(
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        elevation: WidgetStateProperty.all(0),
+      ),
+      chipTheme: base.chipTheme.copyWith(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF1F1F1F)),
         ),
       ),
     ));
   }
+
+  static ThemeData light() => _expressiveBase(
+        brightness: Brightness.light,
+        seed: emerald,
+        cardBorder: Colors.grey.shade200,
+      );
+
+  static ThemeData dark() => _expressiveBase(
+        brightness: Brightness.dark,
+        seed: emerald,
+        cardBorder: Colors.grey.shade800,
+      );
+
+  static ThemeData amoled() => _expressiveBase(
+        brightness: Brightness.dark,
+        seed: emerald,
+        scaffoldBackground: Colors.black,
+        cardColor: const Color(0xFF0A0A0A),
+        surface: Colors.black,
+        surfaceContainerHighest: const Color(0xFF111111),
+        appBarBackground: Colors.black,
+        cardBorder: const Color(0xFF1F1F1F),
+      );
 
   static ThemeData emeraldTheme() {
-    final base = ThemeData.light(useMaterial3: true);
     const surface = Color(0xFFF0FDF7);
-    return _withFont(base.copyWith(
-      scaffoldBackgroundColor: surface,
-      colorScheme: ColorScheme.fromSeed(seedColor: emeraldDark, brightness: Brightness.light),
-      appBarTheme: const AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: surface,
-        foregroundColor: Color(0xFF064E3B),
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFA7F3D0)),
-        ),
-      ),
-    ));
+    return _expressiveBase(
+      brightness: Brightness.light,
+      seed: emeraldDark,
+      scaffoldBackground: surface,
+      cardColor: Colors.white,
+      appBarBackground: surface,
+      appBarForeground: const Color(0xFF064E3B),
+      cardBorder: const Color(0xFFA7F3D0),
+    );
   }
 
   static ThemeData resolve(AppThemeName name, Brightness platformBrightness) {

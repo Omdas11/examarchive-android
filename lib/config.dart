@@ -3,7 +3,7 @@
 /// The app talks directly to the shared Appwrite project (Singapore) —
 /// the same backend the website uses. No custom domain required.
 class AppConfig {
-  static const appVersion = '0.5.2-beta';
+  static const appVersion = '0.6.0-beta';
 
   static const appwriteEndpoint = 'https://sgp.cloud.appwrite.io/v1';
   static const appwriteProjectId = '69a3e59300172d6a19cf';
@@ -13,8 +13,9 @@ class AppConfig {
   static const papersCollection = 'papers';
   static const syllabusCollection = 'syllabus';
   static const syllabusTableCollection = 'Syllabus_Table';
+  static const usersCollection = 'users';
+  static const verificationsCollection = 'content_verifications';
 
   // Storage buckets
   static const papersBucket = 'papers';
-  static const syllabusBucket = 'syllabus-files';
 }
